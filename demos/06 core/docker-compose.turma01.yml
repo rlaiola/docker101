@@ -1,0 +1,81 @@
+#========================================================================
+# Copyright 2022 Rodrigo Laiola Guimaraes
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# 
+# This program is released under license GNU GPL v3+ license.
+#
+#========================================================================
+
+version: '2'
+
+services:
+    boca-web:
+        image: ghcr.io/joaofazolo/boca-docker/boca-web
+        container_name: boca-web-01
+        restart: unless-stopped
+        depends_on:
+            - boca-db
+        environment:
+            # Database configuration
+            - DB_HOST=boca-db
+            - DB_NAME=bocadb
+            # unprivileged boca user
+            - DB_USER=bocauser
+            - DB_PASSWORD=dAm0HAiC
+        networks:
+            - frontend
+            - backend
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.boca-web-01.rule=Host(`turma01.localhost`)"
+            - "traefik.http.routers.boca-web-01.entrypoints=web"
+            - "traefik.http.routers.boca-web-01.service=boca-web-01"
+            - "traefik.http.services.boca-web-01.loadbalancer.server.port=80"
+
+    boca-jail:
+        image: ghcr.io/joaofazolo/boca-docker/boca-jail
+        container_name: boca-jail-01
+        restart: unless-stopped
+        depends_on:
+            - boca-db
+        environment:
+            # Database configuration
+            - DB_HOST=boca-db
+            - DB_NAME=bocadb
+            # unprivileged boca user
+            - DB_USER=bocauser
+            - DB_PASSWORD=dAm0HAiC
+        networks:
+            - backend
+
+    boca-db:
+        image: postgres:10
+        container_name: boca-db_01
+        restart: unless-stopped
+        environment:
+            # Database configuration
+            # privileged boca user
+            POSTGRES_USER: bocauser
+            POSTGRES_PASSWORD: dAm0HAiC
+        networks:
+            - backend
+
+networks:
+    # it is necessary to attach it to the network of stack of interest
+    frontend: # visible to proxy
+        external:
+            name: traefik-proxy
+    backend:  # hidden from the outside world
+        internal: true
